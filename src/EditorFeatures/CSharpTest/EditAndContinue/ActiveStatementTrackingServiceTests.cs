@@ -9,12 +9,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.EditAndContinue;
+using Microsoft.CodeAnalysis.EditAndContinue.Contracts;
 using Microsoft.CodeAnalysis.EditAndContinue.UnitTests;
 using Microsoft.CodeAnalysis.Editor.Implementation.EditAndContinue;
 using Microsoft.CodeAnalysis.Editor.UnitTests.Workspaces;
 using Microsoft.CodeAnalysis.Test.Utilities;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.VisualStudio.Debugger.Contracts.EditAndContinue;
 using Roslyn.Test.Utilities;
 using Roslyn.Utilities;
 using Xunit;
@@ -155,19 +155,19 @@ class C
             var span21 = new LinePositionSpan(new LinePosition(0, 11), new LinePosition(0, 16));
             var span22 = new LinePositionSpan(new LinePosition(0, 21), new LinePosition(0, 26));
 
-            var encService = new MockEditAndContinueWorkspaceService();
+            var spanProvider = new MockActiveStatementSpanProvider();
 
-            encService.GetBaseActiveStatementSpansImpl = (_, documentIds) => ImmutableArray.Create(
+            spanProvider.GetBaseActiveStatementSpansImpl = (_, documentIds) => ImmutableArray.Create(
                 ImmutableArray.Create(
-                    new ActiveStatementSpan(0, span11, ActiveStatementFlags.IsNonLeafFrame, unmappedDocumentId: null),
-                    new ActiveStatementSpan(1, span12, ActiveStatementFlags.IsLeafFrame, unmappedDocumentId: null)),
+                    new ActiveStatementSpan(0, span11, ActiveStatementFlags.NonLeafFrame, unmappedDocumentId: null),
+                    new ActiveStatementSpan(1, span12, ActiveStatementFlags.LeafFrame, unmappedDocumentId: null)),
                 ImmutableArray<ActiveStatementSpan>.Empty);
 
-            encService.GetAdjustedActiveStatementSpansImpl = (document, _) => document.Name switch
+            spanProvider.GetAdjustedActiveStatementSpansImpl = (document, _) => document.Name switch
             {
                 "1.cs" => ImmutableArray.Create(
-                    new ActiveStatementSpan(0, span21, ActiveStatementFlags.IsNonLeafFrame, unmappedDocumentId: null),
-                    new ActiveStatementSpan(1, span22, ActiveStatementFlags.IsLeafFrame, unmappedDocumentId: null)),
+                    new ActiveStatementSpan(0, span21, ActiveStatementFlags.NonLeafFrame, unmappedDocumentId: null),
+                    new ActiveStatementSpan(1, span22, ActiveStatementFlags.LeafFrame, unmappedDocumentId: null)),
                 "2.cs" => ImmutableArray<ActiveStatementSpan>.Empty,
                 _ => throw ExceptionUtilities.Unreachable
             };
@@ -189,7 +189,7 @@ class C
             Assert.Same(snapshot1, document1.GetTextSynchronously(CancellationToken.None).FindCorrespondingEditorTextSnapshot());
             Assert.Same(snapshot2, document2.GetTextSynchronously(CancellationToken.None).FindCorrespondingEditorTextSnapshot());
 
-            var trackingSession = new ActiveStatementTrackingService.TrackingSession(workspace, encService);
+            var trackingSession = new ActiveStatementTrackingService.TrackingSession(workspace, spanProvider);
 
             if (scheduleInitialTrackingBeforeOpenDoc)
             {
@@ -198,8 +198,8 @@ class C
                 var spans1 = trackingSession.Test_GetTrackingSpans();
                 AssertEx.Equal(new[]
                 {
-                    $"V0 →←@[10..15): IsNonLeafFrame",
-                    $"V0 →←@[20..25): IsLeafFrame"
+                    $"V0 →←@[10..15): NonLeafFrame",
+                    $"V0 →←@[20..25): LeafFrame"
                 }, spans1[document1.FilePath].Select(s => $"{s.Span}: {s.Flags}"));
 
                 var spans2 = await trackingSession.GetSpansAsync(solution, document1.Id, document1.FilePath, CancellationToken.None);
@@ -212,8 +212,8 @@ class C
             var spans4 = await trackingSession.GetAdjustedTrackingSpansAsync(document1, snapshot1, CancellationToken.None);
             AssertEx.Equal(new[]
             {
-                $"V0 →←@[11..16): IsNonLeafFrame",
-                $"V0 →←@[21..26): IsLeafFrame"
+                $"V0 →←@[11..16): NonLeafFrame",
+                $"V0 →←@[21..26): LeafFrame"
             }, spans4.Select(s => $"{s.Span}: {s.Flags}"));
 
             AssertEx.Empty(await trackingSession.GetAdjustedTrackingSpansAsync(document2, snapshot2, CancellationToken.None));
@@ -225,19 +225,19 @@ class C
                 var spans5 = trackingSession.Test_GetTrackingSpans();
                 AssertEx.Equal(new[]
                 {
-                    $"V0 →←@[11..16): IsNonLeafFrame",
-                    $"V0 →←@[21..26): IsLeafFrame"
+                    $"V0 →←@[11..16): NonLeafFrame",
+                    $"V0 →←@[21..26): LeafFrame"
                 }, spans5[document1.FilePath].Select(s => $"{s.Span}: {s.Flags}"));
             }
 
             // we are not able to determine active statements in a document:
-            encService.GetAdjustedActiveStatementSpansImpl = (_, _) => ImmutableArray<ActiveStatementSpan>.Empty;
+            spanProvider.GetAdjustedActiveStatementSpansImpl = (_, _) => ImmutableArray<ActiveStatementSpan>.Empty;
 
             var spans6 = await trackingSession.GetAdjustedTrackingSpansAsync(document1, snapshot1, CancellationToken.None);
             AssertEx.Equal(new[]
             {
-                $"V0 →←@[11..16): IsNonLeafFrame",
-                $"V0 →←@[21..26): IsLeafFrame"
+                $"V0 →←@[11..16): NonLeafFrame",
+                $"V0 →←@[21..26): LeafFrame"
             }, spans6.Select(s => $"{s.Span}: {s.Flags}"));
         }
     }

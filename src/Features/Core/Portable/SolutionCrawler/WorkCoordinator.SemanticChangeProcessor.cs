@@ -41,16 +41,16 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                     IAsynchronousOperationListener listener,
                     Registration registration,
                     IncrementalAnalyzerProcessor documentWorkerProcessor,
-                    int backOffTimeSpanInMS,
-                    int projectBackOffTimeSpanInMS,
+                    TimeSpan backOffTimeSpan,
+                    TimeSpan projectBackOffTimeSpan,
                     CancellationToken cancellationToken)
-                    : base(listener, backOffTimeSpanInMS, cancellationToken)
+                    : base(listener, backOffTimeSpan, cancellationToken)
                 {
                     _gate = new SemaphoreSlim(initialCount: 0);
 
                     _registration = registration;
 
-                    _processor = new ProjectProcessor(listener, registration, documentWorkerProcessor, projectBackOffTimeSpanInMS, cancellationToken);
+                    _processor = new ProjectProcessor(listener, registration, documentWorkerProcessor, projectBackOffTimeSpan, cancellationToken);
 
                     _workGate = new NonReentrantLock();
                     _pendingWork = new Dictionary<DocumentId, Data>();
@@ -304,14 +304,8 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                 {
                     var graph = solution.GetProjectDependencyGraph();
 
-                    if (solution.Workspace.Options.GetOption(InternalSolutionCrawlerOptions.DirectDependencyPropagationOnly))
-                    {
-                        return graph.GetProjectsThatDirectlyDependOnThisProject(projectId).Concat(projectId);
-                    }
-
-                    // re-analyzing all transitive dependencies is very expensive. by default we will only
-                    // re-analyze direct dependency for now. and consider flipping the default only if we must.
-                    return graph.GetProjectsThatTransitivelyDependOnThisProject(projectId).Concat(projectId);
+                    // Reanalyze direct dependencies only as reanalyzing all transitive dependencies is very expensive.
+                    return graph.GetProjectsThatDirectlyDependOnThisProject(projectId).Concat(projectId);
                 }
 
                 private readonly struct Data
@@ -352,9 +346,9 @@ namespace Microsoft.CodeAnalysis.SolutionCrawler
                         IAsynchronousOperationListener listener,
                         Registration registration,
                         IncrementalAnalyzerProcessor processor,
-                        int backOffTimeSpanInMS,
+                        TimeSpan backOffTimeSpan,
                         CancellationToken cancellationToken)
-                        : base(listener, backOffTimeSpanInMS, cancellationToken)
+                        : base(listener, backOffTimeSpan, cancellationToken)
                     {
                         _registration = registration;
                         _processor = processor;

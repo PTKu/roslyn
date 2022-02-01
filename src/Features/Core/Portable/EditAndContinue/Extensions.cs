@@ -4,7 +4,7 @@
 
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.VisualStudio.Debugger.Contracts.EditAndContinue;
+using Microsoft.CodeAnalysis.EditAndContinue.Contracts;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.EditAndContinue
@@ -67,5 +67,14 @@ namespace Microsoft.CodeAnalysis.EditAndContinue
 
             throw ExceptionUtilities.UnexpectedValue(ordinal);
         }
+
+        public static bool SupportsEditAndContinue(this Project project)
+            => project.LanguageServices.GetService<IEditAndContinueAnalyzer>() != null;
+
+        // Note: source generated files have relative paths: https://github.com/dotnet/roslyn/issues/51998
+        public static bool SupportsEditAndContinue(this TextDocumentState documentState)
+            => !documentState.Attributes.DesignTimeOnly &&
+               documentState is not DocumentState or DocumentState { SupportsSyntaxTree: true } &&
+               (PathUtilities.IsAbsolute(documentState.FilePath) || documentState is SourceGeneratedDocumentState);
     }
 }

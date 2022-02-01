@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Internal.Log;
 using Microsoft.CodeAnalysis.Options;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Microsoft.CodeAnalysis.Shared.Extensions;
 using Microsoft.CodeAnalysis.SolutionCrawler;
 using Microsoft.CodeAnalysis.Workspaces.Diagnostics;
 using Roslyn.Utilities;
@@ -33,12 +34,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
             using (Logger.LogBlock(FunctionId.DiagnosticIncrementalAnalyzer_SynchronizeWithBuildAsync, LogSynchronizeWithBuild, options, buildDiagnostics, cancellationToken))
             {
                 DebugVerifyDiagnosticLocations(buildDiagnostics);
-
-                if (!PreferBuildErrors(options))
-                {
-                    // Prefer live errors over build errors
-                    return;
-                }
 
                 var solution = Workspace.CurrentSolution;
 
@@ -80,7 +75,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 }
 
                 // Refresh live diagnostics after solution build completes.
-                if (onBuildCompleted && PreferLiveErrorsOnOpenedFiles(options))
+                if (onBuildCompleted)
                 {
                     // Enqueue re-analysis of active document with high-priority right away.
                     if (_documentTrackingService.GetActiveDocument(solution) is { } activeDocument)
@@ -144,12 +139,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
             return builder.ToImmutable();
         }
 
-        private static bool PreferBuildErrors(OptionSet options)
-            => options.GetOption(InternalDiagnosticsOptions.PreferBuildErrorsOverLiveErrors);
-
-        private static bool PreferLiveErrorsOnOpenedFiles(OptionSet options)
-            => options.GetOption(InternalDiagnosticsOptions.PreferLiveErrorsOnOpenedFiles);
-
         private static ImmutableArray<DiagnosticData> ConvertToLiveDiagnostics(
             ILookup<string, DiagnosticData> lookup, ImmutableArray<DiagnosticDescriptor> descriptors, HashSet<string> seen)
         {
@@ -192,7 +181,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
                 descriptor.DefaultSeverity,
                 descriptor.IsEnabledByDefault,
                 diagnostic.WarningLevel,
-                descriptor.CustomTags.ToImmutableArray(),
+                descriptor.ImmutableCustomTags(),
                 diagnostic.Properties,
                 diagnostic.ProjectId,
                 diagnostic.DataLocation,
@@ -208,7 +197,6 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
         {
             using var pooledObject = SharedPools.Default<StringBuilder>().GetPooledObject();
             var sb = pooledObject.Object;
-            sb.Append($"PreferBuildError:{PreferBuildErrors(options)}, PreferLiveOnOpenFiles:{PreferLiveErrorsOnOpenedFiles(options)}");
 
             if (map.Count > 0)
             {
@@ -218,7 +206,7 @@ namespace Microsoft.CodeAnalysis.Diagnostics.EngineV2
 
                     foreach (var diagnostic in diagnostics)
                     {
-                        sb.AppendLine($"    {diagnostic.ToString()}");
+                        sb.AppendLine($"    {diagnostic}");
                     }
                 }
             }

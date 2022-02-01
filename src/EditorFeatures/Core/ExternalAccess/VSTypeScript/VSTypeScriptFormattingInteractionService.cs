@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -31,7 +31,7 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.VSTypeScript
         public bool SupportsFormatOnPaste => _implementation.SupportsFormatOnPaste;
         public bool SupportsFormatOnReturn => _implementation.SupportsFormatOnReturn;
 
-        public bool SupportsFormattingOnTypedCharacter(Document document, char ch)
+        public bool SupportsFormattingOnTypedCharacter(Document document, AutoFormattingOptions options, char ch)
             => _implementation.SupportsFormattingOnTypedCharacter(document, ch);
 
         public Task<ImmutableArray<TextChange>> GetFormattingChangesAsync(Document document, TextSpan? textSpan, DocumentOptionSet? documentOptions, CancellationToken cancellationToken)

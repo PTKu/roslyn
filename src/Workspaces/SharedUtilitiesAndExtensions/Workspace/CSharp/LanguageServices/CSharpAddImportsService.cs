@@ -8,6 +8,9 @@ using System.Composition;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Microsoft.CodeAnalysis.AddImports;
+using Microsoft.CodeAnalysis.CodeGeneration;
+using Microsoft.CodeAnalysis.CSharp.CodeGeneration;
+using Microsoft.CodeAnalysis.CSharp.CodeStyle;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
@@ -17,8 +20,8 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.CSharp.AddImports
 {
     [ExportLanguageService(typeof(IAddImportsService), LanguageNames.CSharp), Shared]
-    internal class CSharpAddImportsService : AbstractAddImportsService<
-        CompilationUnitSyntax, NamespaceDeclarationSyntax, UsingDirectiveSyntax, ExternAliasDirectiveSyntax>
+    internal sealed class CSharpAddImportsService : AbstractAddImportsService<
+        CompilationUnitSyntax, BaseNamespaceDeclarationSyntax, UsingDirectiveSyntax, ExternAliasDirectiveSyntax>
     {
         [ImportingConstructor]
         [Obsolete(MefConstruction.ImportingConstructorMessage, error: true)]
@@ -63,7 +66,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImports
             => node switch
             {
                 CompilationUnitSyntax c => c.Usings,
-                NamespaceDeclarationSyntax n => n.Usings,
+                BaseNamespaceDeclarationSyntax n => n.Usings,
                 _ => default,
             };
 
@@ -71,7 +74,7 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImports
             => node switch
             {
                 CompilationUnitSyntax c => c.Externs,
-                NamespaceDeclarationSyntax n => n.Externs,
+                BaseNamespaceDeclarationSyntax n => n.Externs,
                 _ => default,
             };
 
@@ -123,10 +126,17 @@ namespace Microsoft.CodeAnalysis.CSharp.AddImports
                 => base.Visit(node);
 
             public override SyntaxNode VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
-            {
-                // recurse downwards so we visit inner namespaces first.
-                var rewritten = (NamespaceDeclarationSyntax)(base.VisitNamespaceDeclaration(node) ?? throw ExceptionUtilities.Unreachable);
+                => VisitBaseNamespaceDeclaration(node, (BaseNamespaceDeclarationSyntax?)base.VisitNamespaceDeclaration(node));
 
+            public override SyntaxNode? VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
+                => VisitBaseNamespaceDeclaration(node, (BaseNamespaceDeclarationSyntax?)base.VisitFileScopedNamespaceDeclaration(node));
+
+            private SyntaxNode VisitBaseNamespaceDeclaration(
+                BaseNamespaceDeclarationSyntax node, BaseNamespaceDeclarationSyntax? rewritten)
+            {
+                Contract.ThrowIfNull(rewritten);
+
+                // recurse downwards so we visit inner namespaces first.
                 if (!node.CanAddUsingDirectives(_allowInHiddenRegions, _cancellationToken))
                 {
                     return rewritten;
