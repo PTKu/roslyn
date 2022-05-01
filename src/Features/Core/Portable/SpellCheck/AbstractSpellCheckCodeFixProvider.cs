@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.Completion;
+using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.LanguageServices;
 using Microsoft.CodeAnalysis.Shared.Extensions;
-using Microsoft.CodeAnalysis.Text;
 using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.SpellCheck
@@ -39,6 +39,9 @@ namespace Microsoft.CodeAnalysis.SpellCheck
         public override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var document = context.Document;
+            if (!document.CanApplyChange())
+                return;
+
             var span = context.Span;
             var cancellationToken = context.CancellationToken;
 
@@ -115,7 +118,7 @@ namespace Microsoft.CodeAnalysis.SpellCheck
             // -    We believe spell-check should only compare what you have typed to what symbol would be offered here.
             var options = CompletionOptions.Default with
             {
-                HideAdvancedMembers = context.Options.HideAdvancedMembers,
+                HideAdvancedMembers = context.Options(document.Project.LanguageServices).HideAdvancedMembers,
                 SnippetsBehavior = SnippetsRule.NeverInclude,
                 ShowItemsFromUnimportedNamespaces = false,
                 TargetTypedCompletionFilter = false,
@@ -224,6 +227,8 @@ namespace Microsoft.CodeAnalysis.SpellCheck
 
         private class SpellCheckCodeAction : CodeAction.DocumentChangeAction
         {
+            internal override CodeActionPriority Priority => CodeActionPriority.Low;
+
             public SpellCheckCodeAction(string title, Func<CancellationToken, Task<Document>> createChangedDocument, string equivalenceKey)
                 : base(title, createChangedDocument, equivalenceKey)
             {
@@ -232,6 +237,8 @@ namespace Microsoft.CodeAnalysis.SpellCheck
 
         private class MyCodeAction : CodeAction.CodeActionWithNestedActions
         {
+            internal override CodeActionPriority Priority => CodeActionPriority.Low;
+
             public MyCodeAction(string title, ImmutableArray<CodeAction> nestedActions)
                 : base(title, nestedActions, isInlinable: true)
             {
