@@ -63,7 +63,14 @@ namespace Microsoft.CodeAnalysis.EmbeddedLanguages.VirtualChars
             _span = span;
         }
 
+        /// <summary>
+        /// Gets the number of elements contained in the <see cref="VirtualCharSequence"/>.
+        /// </summary>
         public int Length => _span.Length;
+
+        /// <summary>
+        /// Gets the <see cref="VirtualChar"/> at the specified index.
+        /// </summary>
         public VirtualChar this[int index] => _leafCharacters[_span.Start + index];
 
         public bool IsDefault => _leafCharacters == null;
@@ -101,6 +108,29 @@ namespace Microsoft.CodeAnalysis.EmbeddedLanguages.VirtualChars
             }
 
             return -1;
+        }
+
+        public VirtualChar? FirstOrNull(Func<VirtualChar, bool> predicate)
+        {
+            foreach (var ch in this)
+            {
+                if (predicate(ch))
+                    return ch;
+            }
+
+            return null;
+        }
+
+        public VirtualChar? LastOrNull(Func<VirtualChar, bool> predicate)
+        {
+            for (var i = this.Length - 1; i >= 0; i--)
+            {
+                var ch = this[i];
+                if (predicate(ch))
+                    return ch;
+            }
+
+            return null;
         }
 
         public bool Any(Func<VirtualChar, bool> predicate)
