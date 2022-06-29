@@ -29,13 +29,26 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                            current As FieldSymbol,
                            hoistedVariables As IReadOnlySet(Of Symbol),
                            localProxies As Dictionary(Of Symbol, FieldSymbol),
+                           stateMachineStateDebugInfoBuilder As ArrayBuilder(Of StateMachineStateDebugInfo),
                            slotAllocatorOpt As VariableSlotAllocator,
                            diagnostics As BindingDiagnosticBag)
 
-                MyBase.New(F, state, hoistedVariables, localProxies, slotAllocatorOpt, diagnostics)
+                MyBase.New(F, state, hoistedVariables, localProxies, stateMachineStateDebugInfoBuilder, slotAllocatorOpt, diagnostics)
 
                 _current = current
             End Sub
+
+            Protected Overrides ReadOnly Property FirstIncreasingResumableState As Integer
+                Get
+                    Return StateMachineStates.FirstResumableIteratorState
+                End Get
+            End Property
+
+            Protected Overrides ReadOnly Property EncMissingStateMessage As String
+                Get
+                    Return CodeAnalysisResources.EncCannotResumeSuspendedIteratorMethod
+                End Get
+            End Property
 
             Public Sub GenerateMoveNextAndDispose(Body As BoundStatement,
                                            moveNextMethod As SynthesizedMethod,
@@ -44,9 +57,8 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 ' Generate the body for MoveNext()
                 F.CurrentMethod = moveNextMethod
 
-                Dim initialStateInfo = AddState()
-                Dim initialState As Integer = initialStateInfo.Number
-                Dim initialLabel As GeneratedLabelSymbol = initialStateInfo.ResumeLabel
+                Dim initialLabel As GeneratedLabelSymbol = Nothing
+                AddState(StateMachineStates.InitialIteratorState, initialLabel)
 
                 Me._methodValue = Me.F.SynthesizedLocal(F.CurrentMethod.ReturnType, SynthesizedLocalKind.StateMachineReturnValue, F.Syntax)
 
@@ -68,7 +80,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                         ImmutableArray.Create(Me._methodValue, Me.CachedState),
                         SyntheticBoundNodeFactory.HiddenSequencePoint(),
                         F.Assignment(Me.F.Local(Me.CachedState, True), F.Field(F.Me, Me.StateField, False)),
-                        Dispatch(),
+                        Dispatch(isOutermost:=True),
                         GenerateReturn(finished:=True),
                         F.Label(initialLabel),
                         F.Assignment(F.Field(F.Me, Me.StateField, True), Me.F.AssignmentExpression(Me.F.Local(Me.CachedState, True), Me.F.Literal(StateMachineStates.NotStartedStateMachine))),
@@ -177,14 +189,18 @@ Namespace Microsoft.CodeAnalysis.VisualBasic
                 '     return true
                 ' <next_state_label>: 
                 '     Me.state = -1
-                Dim newState = AddState()
+
+                Dim stateNumber As Integer = 0
+                Dim resumeLabel As GeneratedLabelSymbol = Nothing
+                AddResumableState(node.Syntax, stateNumber, resumeLabel)
+
                 Return F.SequencePoint(
                     node.Syntax,
                     F.Block(
                         F.Assignment(F.Field(F.Me, Me._current, True), DirectCast(Visit(node.Expression), BoundExpression)),
-                        F.Assignment(F.Field(F.Me, Me.StateField, True), F.AssignmentExpression(F.Local(Me.CachedState, True), F.Literal(newState.Number))),
+                        F.Assignment(F.Field(F.Me, Me.StateField, True), F.AssignmentExpression(F.Local(Me.CachedState, True), F.Literal(stateNumber))),
                         GenerateReturn(finished:=False),
-                        F.Label(newState.ResumeLabel),
+                        F.Label(resumeLabel),
                         F.Assignment(F.Field(F.Me, Me.StateField, True), F.AssignmentExpression(F.Local(Me.CachedState, True), F.Literal(StateMachineStates.NotStartedStateMachine)))
                     )
                 )

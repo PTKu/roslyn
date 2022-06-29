@@ -229,6 +229,9 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
         public bool IsGlobalStatement([NotNullWhen(true)] SyntaxNode? node)
            => node is GlobalStatementSyntax;
 
+        public SyntaxNode GetStatementOfGlobalStatement(SyntaxNode node)
+            => ((GlobalStatementSyntax)node).Statement;
+
         public bool AreStatementsInSameContainer(SyntaxNode firstStatement, SyntaxNode secondStatement)
         {
             Debug.Assert(IsStatement(firstStatement));
@@ -259,6 +262,9 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
 
             return false;
         }
+
+        public SyntaxNode GetExpressionOfRefExpression(SyntaxNode node)
+            => ((RefExpressionSyntax)node).Expression;
 
         public SyntaxNode? GetExpressionOfReturnStatement(SyntaxNode node)
             => ((ReturnStatementSyntax)node).Expression;
@@ -468,11 +474,11 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
                 case SyntaxKind.NumericLiteralToken:
                 case SyntaxKind.CharacterLiteralToken:
                 case SyntaxKind.StringLiteralToken:
-                case SyntaxKind.UTF8StringLiteralToken:
+                case SyntaxKind.Utf8StringLiteralToken:
                 case SyntaxKind.SingleLineRawStringLiteralToken:
-                case SyntaxKind.UTF8SingleLineRawStringLiteralToken:
+                case SyntaxKind.Utf8SingleLineRawStringLiteralToken:
                 case SyntaxKind.MultiLineRawStringLiteralToken:
-                case SyntaxKind.UTF8MultiLineRawStringLiteralToken:
+                case SyntaxKind.Utf8MultiLineRawStringLiteralToken:
                 case SyntaxKind.NullKeyword:
                 case SyntaxKind.TrueKeyword:
                 case SyntaxKind.FalseKeyword:
@@ -1299,6 +1305,10 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
             right = assignment.Right;
         }
 
+        // C# does not have assignment statements.
+        public bool IsAnyAssignmentStatement([NotNullWhen(true)] SyntaxNode? node)
+            => false;
+
         public SyntaxToken GetIdentifierOfSimpleName(SyntaxNode node)
             => ((SimpleNameSyntax)node).Identifier;
 
@@ -1374,8 +1384,8 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
         public SyntaxNode GetTypeOfVariableDeclarator(SyntaxNode node)
             => ((VariableDeclarationSyntax)((VariableDeclaratorSyntax)node).Parent!).Type;
 
-        public SyntaxNode? GetValueOfEqualsValueClause(SyntaxNode? node)
-            => ((EqualsValueClauseSyntax?)node)?.Value;
+        public SyntaxNode GetValueOfEqualsValueClause(SyntaxNode node)
+            => ((EqualsValueClauseSyntax)node).Value;
 
         public bool IsEqualsValueOfPropertyDeclaration(SyntaxNode? node)
             => node?.Parent is PropertyDeclarationSyntax propertyDeclaration && propertyDeclaration.Initializer == node;
@@ -1575,6 +1585,14 @@ namespace Microsoft.CodeAnalysis.CSharp.LanguageServices
         #endregion
 
         #region GetPartsOfXXX members
+
+        public void GetPartsOfArgumentList(SyntaxNode node, out SyntaxToken openParenToken, out SeparatedSyntaxList<SyntaxNode> arguments, out SyntaxToken closeParenToken)
+        {
+            var argumentListNode = (ArgumentListSyntax)node;
+            openParenToken = argumentListNode.OpenParenToken;
+            arguments = argumentListNode.Arguments;
+            closeParenToken = argumentListNode.CloseParenToken;
+        }
 
         public void GetPartsOfBaseObjectCreationExpression(SyntaxNode node, out SyntaxNode? argumentList, out SyntaxNode? initializer)
         {

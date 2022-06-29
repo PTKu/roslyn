@@ -3454,6 +3454,14 @@ namespace Microsoft.CodeAnalysis
                     0,                                                                                                                        // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
 
+                 // System_InvalidOperationException__ctorString
+                 (byte)MemberFlags.Constructor,                                                                                               // Flags
+                  (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_InvalidOperationException - WellKnownType.ExtSentinel),        // DeclaringTypeId
+                 0,                                                                                                                           // Arity
+                    1,                                                                                                                        // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_String,
+
                  // System_Runtime_CompilerServices_SwitchExpressionException__ctor
                  (byte)MemberFlags.Constructor,                                                                                               // Flags
                  (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_SwitchExpressionException - WellKnownType.ExtSentinel),// DeclaringTypeId
@@ -3575,6 +3583,14 @@ namespace Microsoft.CodeAnalysis
                     0,                                                                                                      // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void, // Return Type
 
+                // System_Runtime_CompilerServices_LifetimeAnnotationAttribute__ctor
+                (byte)MemberFlags.Constructor,                                                                              // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_Runtime_CompilerServices_LifetimeAnnotationAttribute - WellKnownType.ExtSentinel),                                       // DeclaringTypeId
+                0,                                                                                                          // Arity
+                    2,                                                                                                      // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void, // Return Type
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Boolean,
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Boolean,
 
                 // System_MemoryExtensions__SequenceEqual_Span_T
                 (byte)(MemberFlags.Method | MemberFlags.Static),                                                               // Flags
@@ -3624,6 +3640,14 @@ namespace Microsoft.CodeAnalysis
                     1,                                                                                                      // Method Signature
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void, // Return Type
                     (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_String,
+
+                // System_MissingMethodException__ctor
+                (byte)MemberFlags.Constructor,                                                                                               // Flags
+                (byte)WellKnownType.ExtSentinel, (byte)(WellKnownType.System_MissingMethodException - WellKnownType.ExtSentinel),            // DeclaringTypeId
+                 0,                                                                                                                          // Arity
+                    0,                                                                                                                       // Method Signature
+                    (byte)SignatureTypeCode.TypeHandle, (byte)SpecialType.System_Void,
+
             };
 
             string[] allNames = new string[(int)WellKnownMember.Count]
@@ -4057,6 +4081,7 @@ namespace Microsoft.CodeAnalysis
                 "get_Item",                                 // System_Runtime_CompilerServices_ITuple__get_Item
                 "get_Length",                               // System_Runtime_CompilerServices_ITuple__get_Length
                 ".ctor",                                    // System_InvalidOperationException__ctor
+                ".ctor",                                    // System_InvalidOperationException__ctorString
                 ".ctor",                                    // System_Runtime_CompilerServices_SwitchExpressionException__ctor
                 ".ctor",                                    // System_Runtime_CompilerServices_SwitchExpressionException__ctorObject
                 "Equals",                                   // System_Threading_CancellationToken__Equals
@@ -4073,10 +4098,12 @@ namespace Microsoft.CodeAnalysis
                 "ToStringAndClear",                         // System_Runtime_CompilerServices_DefaultInterpolatedStringHandler__ToStringAndClear
                 ".ctor",                                    // System_Runtime_CompilerServices_RequiredMemberAttribute__ctor
                 ".ctor",                                    // System_Diagnostics_CodeAnalysis_SetsRequiredMembersAttribute__ctor
+                ".ctor",                         // System_Runtime_CompilerServices_LifetimeAttribute__ctor
                 "SequenceEqual",                            // System_MemoryExtensions__SequenceEqual_Span_T
                 "SequenceEqual",                            // System_MemoryExtensions__SequenceEqual_ReadOnlySpan_T
                 "AsSpan",                                   // System_MemoryExtensions__AsSpan_String
                 ".ctor",                                    // System_Runtime_CompilerServices_CompilerFeatureRequiredAttribute_ctor
+                ".ctor",                                    // System_MissingMethodException__ctor
             };
 
             s_descriptors = MemberDescriptor.InitializeFromStream(new System.IO.MemoryStream(initializationBytes, writable: false), allNames);
